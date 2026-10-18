@@ -879,3 +879,32 @@
     padding: 13px;
   }
 }
+
+.transport-date-time-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.transport-date-time-fields .transport-field {
+  min-width: 0;
+}
+
+.transport-date-time-fields input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 9px;
+  color: #253328;
+  background: #ffffff;
+  font-size: 14px;
+  color-scheme: light;
+}
+
+@media (max-width: 420px) {
+  .transport-date-time-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -670,3 +670,30 @@
     grid-template-columns: 1fr;
   }
 }
+/* Status Entregue */
+.sirc-vehicle-marker.delivered {
+  background: #239b32 !important;
+}
+
+.tracking-status.delivered {
+  color: #187a30;
+  background: #e6f8e7;
+}
+
+.tracking-status.delivered::before {
+  background: #39cf45;
+}
+
+/* Status Cancelado */
+.sirc-vehicle-marker.cancelled {
+  background: #85858b !important;
+}
+
+.tracking-status.cancelled {
+  color: #53565b;
+  background: #ececef;
+}
+
+.tracking-status.cancelled::before {
+  background: #85858b;
+}

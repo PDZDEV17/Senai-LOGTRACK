@@ -1,6 +1,7 @@
-
 import { useEffect, useState } from "react";
+import { useSircData } from "../data/sircStore";
 import L from "leaflet";
+
 import {
   MapContainer,
   TileLayer,
@@ -10,7 +11,9 @@ import {
   CircleMarker,
   useMap,
 } from "react-leaflet";
+
 import "leaflet/dist/leaflet.css";
+
 import {
   Activity,
   AlertTriangle,
@@ -18,17 +21,17 @@ import {
   MapPin,
   Navigation,
   Package,
-  Route,
   Search,
   Signal,
   Truck,
   Warehouse,
 } from "lucide-react";
+
 import "./Rastreamento.css";
 
-// Coordenadas e veículos fictícios para testar a interface.
-// Nenhum GPS ou ESP32 está conectado nesta etapa.
-const vehicles = [
+// Coordenadas demonstrativas.
+// O sistema ainda não recebe localização real por GPS ou ESP32.
+const vehicleTemplates = [
   {
     id: "TR-008",
     plate: "DEMO-008",
@@ -82,21 +85,65 @@ const vehicles = [
   },
 ];
 
+const EMPTY_VEHICLE = {
+  ...vehicleTemplates[0],
+  id: "Sem veículo",
+  transportId: "sem-transporte",
+  load: "Nenhuma carga cadastrada",
+  destination: "Sem destino cadastrado",
+  status: "Aguardando saída",
+  lastUpdate: "Sem atualização",
+  position: [-5.0895, -42.802],
+  route: [
+    [-5.0895, -42.802],
+  ],
+};
+
 const statusClass = {
   "Em trânsito": "moving",
   Parado: "stopped",
   "Aguardando saída": "waiting",
+  Entregue: "delivered",
+  Cancelado: "cancelled",
 };
+
+// Converte os estados dos transportes para os estados
+// reconhecidos pela tela de Rastreamento.
+function normalizeTransportStatus(status) {
+  const normalizedStatus = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedStatus === "em trânsito".toLowerCase()) {
+    return "Em trânsito";
+  }
+
+  if (normalizedStatus === "parado") {
+    return "Parado";
+  }
+
+  if (normalizedStatus === "entregue") {
+    return "Entregue";
+  }
+
+  if (normalizedStatus === "cancelado") {
+    return "Cancelado";
+  }
+
+  return "Aguardando saída";
+}
 
 const truckSvg = `
   <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M3 6h11v12H3z M14 10h4l3 4v4h-7z"
-      fill="none" stroke="currentColor" stroke-width="1.8"
-      stroke-linejoin="round"/>
-    <circle cx="7" cy="19" r="1.8"
-      fill="currentColor"/>
-    <circle cx="18" cy="19" r="1.8"
-      fill="currentColor"/>
+    <path
+      d="M3 6h11v12H3z M14 10h4l3 4v4h-7z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linejoin="round"
+    />
+    <circle cx="7" cy="19" r="1.8" fill="currentColor" />
+    <circle cx="18" cy="19" r="1.8" fill="currentColor" />
   </svg>
 `;
 
@@ -128,22 +175,91 @@ function MapFocus({ position }) {
 }
 
 export default function Rastreamento() {
-  const [selectedId, setSelectedId] = useState("TR-008");
+  const { transports } = useSircData();
+
+  const [selectedId, setSelectedId] = useState(
+    transports[0]?.id || ""
+  );
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
 
-  const selectedVehicle =
-    vehicles.find((vehicle) => vehicle.id === selectedId) || vehicles[0];
+  // Monta a lista de veículos usando os transportes compartilhados.
+  // As coordenadas, placas e motoristas permanecem demonstrativos.
+  const vehicles = transports.map((transport, index) => {
+    const template =
+      vehicleTemplates.find(
+        (vehicle) => vehicle.id === transport.vehicle
+      ) || vehicleTemplates[index % vehicleTemplates.length];
 
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    const searchableText =
-      `${vehicle.id} ${vehicle.plate} ${vehicle.load} ${vehicle.destination}`
-        .toLowerCase();
+    const loadValue =
+      transport.load || template.load.replace(/^Carga\s+/, "");
 
-    return (
-      searchableText.includes(search.toLowerCase()) &&
-      (statusFilter === "Todos" || vehicle.status === statusFilter)
+    return {
+      ...template,
+
+      // Identificação apresentada para o veículo.
+      id: transport.vehicle || transport.id,
+
+      // Identificador único usado internamente para selecionar
+      // o transporte correto.
+      transportId: transport.id,
+
+      load: loadValue.startsWith("Carga ")
+        ? loadValue
+        : `Carga ${loadValue}`,
+
+      origin: transport.origin || template.origin,
+
+      destination: transport.destination || template.destination,
+
+      status: normalizeTransportStatus(transport.status),
+
+      lastUpdate: transport.updatedAt || "Sem atualização",
+    };
+  });
+
+  // Se a lista mudar e o transporte selecionado deixar de existir,
+  // seleciona automaticamente o primeiro transporte disponível.
+  useEffect(() => {
+    if (vehicles.length === 0) {
+      return;
+    }
+
+    const selectedStillExists = vehicles.some(
+      (vehicle) => vehicle.transportId === selectedId
     );
+
+    if (!selectedStillExists) {
+      setSelectedId(vehicles[0].transportId);
+    }
+  }, [vehicles, selectedId]);
+
+  const selectedVehicle =
+    vehicles.find(
+      (vehicle) => vehicle.transportId === selectedId
+    ) ||
+    vehicles[0] ||
+    EMPTY_VEHICLE;
+
+  // Pesquisa por veículo, placa, carga ou destino.
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    const searchableText = `
+      ${vehicle.id}
+      ${vehicle.plate}
+      ${vehicle.load}
+      ${vehicle.destination}
+    `.toLowerCase();
+
+    const matchesSearch = searchableText.includes(
+      search.trim().toLowerCase()
+    );
+
+    const matchesStatus =
+      statusFilter === "Todos" ||
+      vehicle.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
   });
 
   const movingCount = vehicles.filter(
@@ -160,12 +276,15 @@ export default function Rastreamento() {
 
   return (
     <section className="tracking-page">
+      {/* Cabeçalho */}
       <header className="tracking-header">
         <div>
           <span className="tracking-eyebrow">
             RASTREAMENTO DE FROTAS
           </span>
+
           <h2>Rastreamento</h2>
+
           <p>
             Acompanhe os veículos e consulte as informações das cargas.
           </p>
@@ -177,15 +296,17 @@ export default function Rastreamento() {
         </span>
       </header>
 
+      {/* Indicadores */}
       <section className="tracking-metrics">
         <article className="tracking-metric">
           <div className="tracking-metric-icon blue">
             <Truck size={21} />
           </div>
+
           <div>
             <span>Veículos cadastrados</span>
             <strong>{vehicles.length}</strong>
-            <small>Veículos ilustrativos</small>
+            <small>Vinculados aos transportes</small>
           </div>
         </article>
 
@@ -193,6 +314,7 @@ export default function Rastreamento() {
           <div className="tracking-metric-icon green">
             <Navigation size={21} />
           </div>
+
           <div>
             <span>Em trânsito</span>
             <strong>{movingCount}</strong>
@@ -204,10 +326,11 @@ export default function Rastreamento() {
           <div className="tracking-metric-icon orange">
             <Clock3 size={21} />
           </div>
+
           <div>
             <span>Parados</span>
             <strong>{stoppedCount}</strong>
-            <small>Status de demonstração</small>
+            <small>Status dos transportes</small>
           </div>
         </article>
 
@@ -215,6 +338,7 @@ export default function Rastreamento() {
           <div className="tracking-metric-icon purple">
             <Warehouse size={21} />
           </div>
+
           <div>
             <span>Aguardando saída</span>
             <strong>{waitingCount}</strong>
@@ -223,11 +347,13 @@ export default function Rastreamento() {
         </article>
       </section>
 
+      {/* Mapa e lista de veículos */}
       <section className="tracking-workspace">
         <article className="tracking-map-panel">
           <div className="tracking-panel-header">
             <div>
               <h3>Mapa de operações</h3>
+
               <p>
                 <MapPin size={13} />
                 Teresina, PI — localização ilustrativa
@@ -255,6 +381,7 @@ export default function Rastreamento() {
 
               <MapFocus position={selectedVehicle.position} />
 
+              {/* Marcador do armazém */}
               <CircleMarker
                 center={[-5.0895, -42.802]}
                 radius={8}
@@ -272,6 +399,7 @@ export default function Rastreamento() {
                 </Popup>
               </CircleMarker>
 
+              {/* Percurso do veículo selecionado */}
               <Polyline
                 positions={selectedVehicle.route}
                 pathOptions={{
@@ -285,16 +413,17 @@ export default function Rastreamento() {
                 }}
               />
 
+              {/* Veículos vinculados aos transportes */}
               {vehicles.map((vehicle) => (
                 <Marker
-                  key={vehicle.id}
+                  key={vehicle.transportId}
                   position={vehicle.position}
                   icon={createVehicleIcon(
                     vehicle.status,
-                    vehicle.id === selectedId
+                    vehicle.transportId === selectedId
                   )}
                   eventHandlers={{
-                    click: () => setSelectedId(vehicle.id),
+                    click: () => setSelectedId(vehicle.transportId),
                   }}
                 >
                   <Popup>
@@ -302,7 +431,7 @@ export default function Rastreamento() {
                       <strong>{vehicle.id}</strong>
                       <span>{vehicle.load}</span>
                       <span>Status: {vehicle.status}</span>
-                      <span>Dados demonstrativos</span>
+                      <span>Localização demonstrativa</span>
                     </div>
                   </Popup>
                 </Marker>
@@ -315,14 +444,17 @@ export default function Rastreamento() {
               <i className="legend-circle blue" />
               Armazém
             </span>
+
             <span>
               <i className="legend-circle green" />
               Em trânsito
             </span>
+
             <span>
               <i className="legend-circle orange" />
               Parado
             </span>
+
             <span>
               <i className="legend-circle purple" />
               Aguardando saída
@@ -331,24 +463,31 @@ export default function Rastreamento() {
 
           <div className="tracking-map-notice">
             <AlertTriangle size={16} />
+
             <span>
-              Os veículos e percursos do mapa são fictícios. O sistema ainda
-              não recebe coordenadas reais de GPS ou ESP32.
+              Os veículos e percursos do mapa são fictícios. O sistema
+              ainda não recebe coordenadas reais de GPS ou ESP32.
             </span>
           </div>
         </article>
 
+        {/* Painel lateral */}
         <aside className="tracking-vehicles-panel">
           <div className="tracking-panel-header">
             <div>
               <h3>Veículos</h3>
               <p>Selecione um veículo para consultar o percurso.</p>
             </div>
-            <span className="tracking-count">{filteredVehicles.length}</span>
+
+            <span className="tracking-count">
+              {filteredVehicles.length}
+            </span>
           </div>
 
+          {/* Campo de pesquisa */}
           <label className="tracking-search">
             <Search size={17} />
+
             <input
               type="search"
               placeholder="Buscar veículo ou carga..."
@@ -358,27 +497,35 @@ export default function Rastreamento() {
             />
           </label>
 
+          {/* Filtro por status */}
           <label className="tracking-filter">
             <span>Status</span>
+
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
-              <option>Todos</option>
-              <option>Em trânsito</option>
-              <option>Parado</option>
-              <option>Aguardando saída</option>
+              <option value="Todos">Todos</option>
+              <option value="Em trânsito">Em trânsito</option>
+              <option value="Parado">Parado</option>
+              <option value="Aguardando saída">
+                Aguardando saída
+              </option>
+              <option value="Entregue">Entregue</option>
+              <option value="Cancelado">Cancelado</option>
             </select>
           </label>
 
+          {/* Lista de transportes */}
           <div className="tracking-vehicle-list">
             {filteredVehicles.map((vehicle) => (
               <button
-                key={vehicle.id}
+                key={vehicle.transportId}
+                type="button"
                 className={`tracking-vehicle-card ${
-                  selectedId === vehicle.id ? "selected" : ""
+                  selectedId === vehicle.transportId ? "selected" : ""
                 }`}
-                onClick={() => setSelectedId(vehicle.id)}
+                onClick={() => setSelectedId(vehicle.transportId)}
               >
                 <div className="tracking-vehicle-icon">
                   <Truck size={20} />
@@ -387,11 +534,18 @@ export default function Rastreamento() {
                 <div className="tracking-vehicle-info">
                   <div className="tracking-vehicle-title">
                     <strong>{vehicle.id}</strong>
-                    <span className={`tracking-status ${statusClass[vehicle.status]}`}>
+
+                    <span
+                      className={`tracking-status ${
+                        statusClass[vehicle.status] || "waiting"
+                      }`}
+                    >
                       {vehicle.status}
                     </span>
                   </div>
+
                   <span>{vehicle.load}</span>
+
                   <small>
                     <MapPin size={12} />
                     {vehicle.destination}
@@ -403,14 +557,25 @@ export default function Rastreamento() {
             {filteredVehicles.length === 0 && (
               <div className="tracking-empty">
                 <Search size={23} />
-                <strong>Nenhum veículo encontrado</strong>
-                <span>Tente alterar a busca ou o status.</span>
+
+                <strong>
+                  {vehicles.length === 0
+                    ? "Nenhum transporte cadastrado"
+                    : "Nenhum veículo encontrado"}
+                </strong>
+
+                <span>
+                  {vehicles.length === 0
+                    ? "Cadastre um transporte para visualizá-lo aqui."
+                    : "Tente alterar a busca ou o status."}
+                </span>
               </div>
             )}
           </div>
         </aside>
       </section>
 
+      {/* Detalhes do transporte selecionado */}
       <section className="tracking-details-panel">
         <div className="tracking-panel-header">
           <div>
@@ -418,34 +583,48 @@ export default function Rastreamento() {
             <p>Informações do veículo selecionado</p>
           </div>
 
-          <span className={`tracking-status ${statusClass[selectedVehicle.status]}`}>
+          <span
+            className={`tracking-status ${
+              statusClass[selectedVehicle.status] || "waiting"
+            }`}
+          >
             {selectedVehicle.status}
           </span>
         </div>
 
         <div className="tracking-details-grid">
           <div className="tracking-detail-item">
-            <span>Identificação</span>
+            <span>Identificação do veículo</span>
             <strong>{selectedVehicle.id}</strong>
           </div>
+
+          <div className="tracking-detail-item">
+            <span>Identificação do transporte</span>
+            <strong>{selectedVehicle.transportId}</strong>
+          </div>
+
           <div className="tracking-detail-item">
             <span>Carga</span>
             <strong>{selectedVehicle.load}</strong>
           </div>
+
           <div className="tracking-detail-item">
             <span>Origem</span>
             <strong>{selectedVehicle.origin}</strong>
           </div>
+
           <div className="tracking-detail-item">
             <span>Destino</span>
             <strong>{selectedVehicle.destination}</strong>
           </div>
+
           <div className="tracking-detail-item">
             <span>Responsável demonstrativo</span>
             <strong>{selectedVehicle.driver}</strong>
           </div>
+
           <div className="tracking-detail-item">
-            <span>Última atualização de exemplo</span>
+            <span>Última atualização</span>
             <strong>{selectedVehicle.lastUpdate}</strong>
           </div>
         </div>
@@ -453,6 +632,7 @@ export default function Rastreamento() {
 
       <footer className="tracking-footer">
         <Package size={15} />
+
         <span>
           SIRC · Dados de demonstração, sem integração com dispositivos físicos.
         </span>

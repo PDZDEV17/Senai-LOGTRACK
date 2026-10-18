@@ -1,4 +1,4 @@
-
+import { useSircData } from "../data/sircStore";
 import { useEffect, useState } from "react";
 import {
   MapContainer,
@@ -12,7 +12,6 @@ import "leaflet/dist/leaflet.css";
 import {
   ArrowRight,
   Check,
-  CheckCircle2,
   Clock3,
   MapPin,
   Package,
@@ -24,7 +23,7 @@ import {
 } from "lucide-react";
 import "./Clientes.css";
 
-const deliveries = [
+const deliveryTemplates = [
   {
     id: "SIRC-2048",
     order: "PED-2048",
@@ -175,6 +174,44 @@ const deliveries = [
     ],
   },
 ];
+function getLoadNumber(value) {
+  const match = String(value || "").match(/LT-(\d+)/i);
+  return match ? match[1] : null;
+}
+
+function normalizeClientStatus(status, fallbackStatus) {
+  const value = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  if (value.includes("entregue")) return "Entregue";
+  if (value.includes("cancel")) return "Cancelado";
+  if (value.includes("trânsito")) return "Em trânsito";
+  if (value === "parado") return "Parado";
+  if (value.includes("aguard")) return "Aguardando saída";
+
+  if (value.includes("planejado") || value.includes("prepar")) {
+    return "Em preparação";
+  }
+
+  return fallbackStatus || "Em preparação";
+}
+
+function getDeliveryProgress(status) {
+  const value = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  if (value.includes("cancel")) return 0;
+  if (value.includes("entregue")) return 100;
+  if (value.includes("trânsito")) return 68;
+  if (value === "parado") return 55;
+  if (value.includes("aguard")) return 40;
+  if (value.includes("prepar")) return 25;
+  if (value.includes("planej")) return 10;
+
+  return 10;
+}
 
 function MapFocus({ position }) {
   const map = useMap();
@@ -193,10 +230,66 @@ function getStatusClass(status) {
 }
 
 export default function Clientes() {
+  const { transports } = useSircData();
+
+  const deliveries = deliveryTemplates.map((delivery) => {
+    const clientCode = String(delivery.id || "").match(/(\d+)$/)?.[1];
+
+    const transport = transports.find((item) => {
+      return getLoadNumber(item.load) === clientCode;
+      if (clientCode === "2048") {
+  console.log("DIAGNÓSTICO SIRC-2048", {
+    codigoCliente: clientCode,
+
+    cargasEncontradas: transports.map((item) => ({
+      id: item.id,
+      carga: item.load,
+      status: item.status,
+      numeroExtraido: getLoadNumber(item.load),
+    })),
+
+    transporteEncontrado: transport
+      ? {
+          id: transport.id,
+          carga: transport.load,
+          status: transport.status,
+        }
+      : null,
+
+    progressoCalculado: transport
+      ? getDeliveryProgress(transport.status)
+      : delivery.progress,
+  });
+}
+      
+    });
+
+    return {
+      ...delivery,
+      status: transport
+        ? normalizeClientStatus(transport.status, delivery.status)
+        : delivery.status,
+      progress: transport
+        ? getDeliveryProgress(transport.status)
+        : delivery.progress,
+      origin: transport?.origin || delivery.origin,
+      destination: transport?.destination || delivery.destination,
+      expected: transport?.expected || delivery.expected,
+      transportId: transport?.id || delivery.transportId,
+      updatedAt: transport?.updatedAt || delivery.updatedAt,
+      lastUpdate: transport?.updatedAt || delivery.lastUpdate,
+    };
+  });
+
   const [trackingCode, setTrackingCode] = useState("SIRC-2048");
-  const [activeDelivery, setActiveDelivery] = useState(deliveries[0]);
+  const [activeDeliveryId, setActiveDeliveryId] = useState("SIRC-2048");
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
+
+  // Busca a versão mais recente da entrega sempre que o SIRC atualizar os dados.
+  const activeDelivery =
+    deliveries.find((delivery) => delivery.id === activeDeliveryId) ||
+    deliveries[0];
 
   function handleTracking(event) {
     event.preventDefault();
@@ -222,7 +315,7 @@ export default function Clientes() {
       return;
     }
 
-    setActiveDelivery(result);
+    setActiveDeliveryId(result.id);
     setTrackingCode(result.id);
     setError("");
   }

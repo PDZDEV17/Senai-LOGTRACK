@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useSircData } from "../data/sircStore";
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -40,8 +40,13 @@ const emptyMovement = {
 };
 
 export default function Estoque() {
-  const [products, setProducts] = useState(initialProducts);
-  const [movements, setMovements] = useState([]);
+const {
+  products,
+  setProducts,
+  movements,
+  setMovements,
+} = useSircData();
+
   const [activeTab, setActiveTab] = useState("produtos");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todas");

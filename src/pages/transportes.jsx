@@ -1,4 +1,5 @@
 
+import { useSircData } from "../data/sircStore";
 import { useState } from "react";
 import {
   Activity,
@@ -140,7 +141,7 @@ function formatDateTime(value) {
 }
 
 export default function Transportes() {
-  const [transports, setTransports] = useState(initialTransports);
+  const { transports, setTransports } = useSircData();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [showForm, setShowForm] = useState(false);
@@ -583,16 +584,29 @@ export default function Transportes() {
                 />
               </label>
 
-              <label className="transport-field">
-                Previsão de chegada
-                <input
-                  type="datetime-local"
-                  name="expected"
-                  value={form.expected}
-                  onChange={handleFormChange}
-                  required
-                />
-              </label>
+                <div className="transport-date-time-fields">
+                  <label className="transport-field">
+                    Data de chegada
+                    <input  
+                      type="date"
+                      name="expectedDate"
+                      value={form.expectedDate}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </label>
+
+                  <label className="transport-field">
+                    Horário de chegada
+                    <input
+                      type="time"
+                      name="expectedTime"
+                      value={form.expectedTime}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </label>
+                </div>
 
               <div className="transport-modal-note">
                 <Activity size={16} />
