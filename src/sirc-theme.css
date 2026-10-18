@@ -1,0 +1,1080 @@
+
+/* ==========================================
+   SIRC — IDENTIDADE VISUAL OFICIAL
+   Equipe LogTrack
+   ========================================== */
+
+:root {
+  --sirc-black: #0b0d0c;
+  --sirc-dark: #111512;
+  --sirc-green: #39cf45;
+  --sirc-lime: #70e337;
+  --sirc-green-dark: #239b32;
+  --sirc-silver: #85858b;
+  --sirc-text: #202722;
+  --sirc-muted: #7c887f;
+  --sirc-border: #e3e9e3;
+  --sirc-background: #f5f7f5;
+  --sirc-white: #ffffff;
+}
+
+body {
+  color: var(--sirc-text);
+  background: var(--sirc-background);
+}
+
+/* MENU LATERAL */
+
+.sidebar {
+  background: var(--sirc-black) !important;
+  color: #e5e9e5;
+  border-right: 1px solid #252b26;
+}
+
+.sidebar .brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 135px;
+  padding: 8px 0;
+  margin-bottom: 20px;
+}
+
+.sidebar .brand-logo {
+  display: block;
+  width: 145px;
+  max-width: 100%;
+  max-height: 135px;
+  height: auto;
+  object-fit: contain;
+}
+
+.sidebar-label {
+  color: #858f87 !important;
+}
+
+.nav-item {
+  color: #adb6ae !important;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.nav-item:hover {
+  color: #ffffff !important;
+  background: #ffffff0b !important;
+}
+
+.sidebar .nav-item.active {
+  color: #ffffff !important;
+  border-color: #39cf4530 !important;
+  background: #39cf4514 !important;
+}
+
+.sidebar .nav-item.active svg {
+  color: var(--sirc-green) !important;
+}
+
+.nav-item.active::before {
+  background: var(--sirc-green) !important;
+}
+
+.nav-count {
+  color: var(--sirc-lime) !important;
+  background: #39cf4520 !important;
+}
+
+.sidebar-help {
+  border-color: #ffffff13 !important;
+  background: #ffffff06 !important;
+}
+
+.help-icon {
+  color: var(--sirc-green) !important;
+}
+
+.team-avatar {
+  color: var(--sirc-lime) !important;
+  background: #39cf4520 !important;
+}
+
+.team-info strong {
+  color: #ffffff !important;
+}
+
+.settings-icon {
+  color: #929a93 !important;
+}
+
+/* CABEÇALHO E BUSCAS */
+
+.topbar {
+  background: #ffffffed;
+  border-bottom-color: var(--sirc-border);
+}
+
+.search-box:focus-within,
+.stock-search:focus-within,
+.tracking-search:focus-within,
+.transport-search:focus-within,
+.client-search-input:focus-within {
+  border-color: var(--sirc-green) !important;
+  box-shadow: 0 0 0 3px #39cf4518 !important;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline-color: var(--sirc-green) !important;
+}
+
+/* BOTÕES PRINCIPAIS */
+
+.primary-button,
+.stock-primary-button,
+.transport-primary-button,
+.reports-export-button,
+.client-track-button {
+  color: #071008 !important;
+  border-color: var(--sirc-green) !important;
+  background: var(--sirc-green) !important;
+  box-shadow: 0 4px 12px #39cf4520 !important;
+}
+
+.primary-button:hover,
+.stock-primary-button:hover,
+.transport-primary-button:hover,
+.reports-export-button:hover,
+.client-track-button:hover {
+  color: #071008 !important;
+  background: var(--sirc-lime) !important;
+}
+
+.text-button,
+.quick-card-text button {
+  color: var(--sirc-green-dark) !important;
+}
+
+.text-button:hover,
+.quick-card-text button:hover {
+  color: #167524 !important;
+}
+
+/* DASHBOARD */
+
+.metric-icon.blue,
+.movement-icon.blue,
+.quick-card-icon.blue,
+.stock-metric-icon.blue,
+.stock-metric-icon.green,
+.tracking-metric-icon.green,
+.transport-metric-icon.green,
+.reports-metric-icon.green,
+.client-info-icon.green {
+  color: #218d31 !important;
+  background: #e6f8e7 !important;
+}
+
+.metric-icon.purple,
+.movement-icon.purple,
+.quick-card-icon.purple,
+.stock-metric-icon.purple,
+.tracking-metric-icon.purple,
+.transport-metric-icon.purple,
+.reports-metric-icon.purple,
+.client-info-icon.purple {
+  color: #66716a !important;
+  background: #edf0ed !important;
+}
+
+.metric-icon.green,
+.movement-icon.green,
+.quick-card-icon.green,
+.tracking-metric-icon.blue,
+.transport-metric-icon.blue,
+.reports-metric-icon.blue,
+.client-info-icon.blue {
+  color: #218d31 !important;
+  background: #e6f8e7 !important;
+}
+
+.variation.blue,
+.variation.green {
+  color: #218d31 !important;
+  background: #e6f8e7 !important;
+}
+
+.variation.purple {
+  color: #66716a !important;
+  background: #edf0ed !important;
+}
+
+.status-dot {
+  background: var(--sirc-green) !important;
+  box-shadow: 0 0 0 3px #39cf4520 !important;
+}
+
+/* ESTOQUE */
+
+.stock-product-icon {
+  color: var(--sirc-green-dark) !important;
+  border-color: #d9efd9 !important;
+  background: #eef9ee !important;
+}
+
+.stock-tabs button.active {
+  color: var(--sirc-green-dark) !important;
+  border-bottom-color: var(--sirc-green) !important;
+}
+
+.stock-action-btn.entry {
+  color: #218d31 !important;
+  border-color: #d5efd7 !important;
+  background: #effaef !important;
+}
+
+.stock-action-btn.entry:hover {
+  background: #def5df !important;
+}
+
+.stock-movement-switch button.active.entry {
+  color: #218d31 !important;
+  border-color: #d5efd7 !important;
+}
+
+.stock-current-balance {
+  border-color: #dceede !important;
+  background: #f4fbf4 !important;
+}
+
+.stock-current-balance strong {
+  color: #218d31 !important;
+}
+
+.stock-modal-note {
+  color: #69766b !important;
+  border-color: #dfe8df !important;
+  background: #f6f8f6 !important;
+}
+
+/* RASTREAMENTO */
+
+.tracking-metric-icon.blue,
+.tracking-vehicle-icon {
+  color: #218d31 !important;
+  border-color: #d9efd9 !important;
+  background: #eef9ee !important;
+}
+
+.tracking-vehicle-card.selected {
+  border-left-color: var(--sirc-green) !important;
+  background: #f0faf0 !important;
+}
+
+.tracking-vehicle-card.selected .tracking-vehicle-icon {
+  color: #218d31 !important;
+  background: #e2f6e3 !important;
+}
+
+.tracking-map-label {
+  color: #626e64 !important;
+  border-color: #dfe8df !important;
+  background: #f6f8f6 !important;
+}
+
+.sirc-vehicle-marker.moving {
+  background: var(--sirc-green-dark) !important;
+}
+
+.sirc-vehicle-marker.waiting {
+  background: var(--sirc-silver) !important;
+}
+
+.tracking-count {
+  color: #218d31 !important;
+  background: #e6f8e7 !important;
+}
+
+/* TRANSPORTES */
+
+.transport-row-icon {
+  color: var(--sirc-green-dark) !important;
+  border-color: #d9efd9 !important;
+  background: #eef9ee !important;
+}
+
+.transport-history-button {
+  color: #218d31 !important;
+  border-color: #d8ecd9 !important;
+  background: #f1faf1 !important;
+}
+
+.transport-history-button:hover {
+  background: #e4f6e5 !important;
+}
+
+.transport-modal-note {
+  color: #596c5c !important;
+  border-color: #dceede !important;
+  background: #f4fbf4 !important;
+}
+
+.transport-info {
+  border-color: #dceede !important;
+  background: #f5fbf5 !important;
+}
+
+.transport-info-icon {
+  color: #218d31 !important;
+  background: #e5f7e6 !important;
+}
+
+/* RELATÓRIOS */
+
+.reports-legend-dot,
+.reports-bar-fill {
+  background: var(--sirc-green) !important;
+  box-shadow: 0 4px 12px #39cf4518 !important;
+}
+
+.reports-status-dot.blue,
+.reports-status-fill.blue {
+  background: var(--sirc-green) !important;
+}
+
+.reports-status-dot.green,
+.reports-status-fill.green {
+  background: var(--sirc-green-dark) !important;
+}
+
+.reports-chart-badge {
+  color: #218d31 !important;
+  border-color: #d8ecd9 !important;
+  background: #f1faf1 !important;
+}
+
+.reports-stock-icon,
+.reports-activity-icon.blue {
+  color: #218d31 !important;
+  border-color: #d9efd9 !important;
+  background: #eef9ee !important;
+}
+
+/* PORTAL DO CLIENTE */
+
+.client-brand-icon {
+  color: #071008 !important;
+  background: linear-gradient(
+    145deg,
+    var(--sirc-lime),
+    var(--sirc-green)
+  ) !important;
+}
+
+.client-eyebrow,
+.client-progress-heading strong {
+  color: var(--sirc-green-dark) !important;
+}
+
+.client-progress-fill.moving {
+  background: linear-gradient(
+    90deg,
+    var(--sirc-lime),
+    var(--sirc-green)
+  ) !important;
+}
+
+.client-progress-fill.preparing {
+  background: var(--sirc-silver) !important;
+}
+
+.client-progress-fill.delivered {
+  background: var(--sirc-green-dark) !important;
+}
+
+.client-route-dot.origin {
+  background: var(--sirc-green) !important;
+}
+
+.client-timeline-event.current .client-timeline-marker > span {
+  color: #218d31 !important;
+  border-color: #d4efd5 !important;
+  background: #e6f8e7 !important;
+}
+
+.client-timeline-event.current .client-timeline-title strong {
+  color: #218d31 !important;
+}
+
+.client-demo-notice {
+  color: #626e64 !important;
+  border-color: #dfe8df !important;
+  background: #f6f8f6 !important;
+}
+
+/* CORES DE ALERTA */
+
+.metric-icon.orange,
+.movement-icon.orange,
+.stock-metric-icon.orange,
+.tracking-metric-icon.orange,
+.transport-metric-icon.orange,
+.reports-metric-icon.orange {
+  color: #ad742f !important;
+  background: #fff2e1 !important;
+}
+
+/* FUNDO E ACABAMENTO */
+
+.metric-card,
+.panel,
+.quick-card,
+.stock-metric-card,
+.stock-table-panel,
+.tracking-metric,
+.tracking-map-panel,
+.tracking-vehicles-panel,
+.tracking-details-panel,
+.transport-metric-card,
+.transport-panel,
+.reports-metric-card,
+.reports-panel,
+.client-panel,
+.client-delivery-overview,
+.client-info-card,
+.client-search-card {
+  border-color: var(--sirc-border);
+}
+
+.dashboard-content,
+.stock-page,
+.tracking-page,
+.transport-page,
+.reports-page {
+  background: var(--sirc-background);
+}
+
+.stock-footer-dot {
+  background: var(--sirc-green) !important;
+}
+
+@media (max-width: 760px) {
+  .sidebar .brand {
+    justify-content: flex-start;
+    min-height: auto;
+    margin-bottom: 16px;
+  }
+
+  .sidebar .brand-logo {
+    width: 115px;
+    max-height: 110px;
+  }
+}
+
+/* ==========================================
+   SIRC — MELHORIA DE LEITURA E CONTRASTE
+   ========================================== */
+
+:root {
+  --sirc-text: #17231a;
+  --sirc-muted: #536157;
+  --sirc-border: #dce4dc;
+  --sirc-background: #f5f7f5;
+}
+
+/* Texto padrão */
+body {
+  color: #17231a;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* Títulos das páginas */
+.welcome-section h2,
+.stock-page-header h2,
+.tracking-header h2,
+.transport-header h2,
+.reports-header h2,
+.module-placeholder h2 {
+  color: #17231a !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.7px;
+}
+
+.welcome-section p,
+.stock-page-header p,
+.tracking-header p,
+.transport-header p,
+.reports-header p {
+  color: #536157 !important;
+  font-size: 13px !important;
+  line-height: 1.7;
+}
+
+/* Cabeçalhos dos painéis */
+.panel-header h3,
+.stock-table-heading h3,
+.tracking-panel-header h3,
+.transport-panel-heading h3,
+.reports-panel-header h3,
+.client-panel-header h3 {
+  color: #1b2a20 !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+}
+
+.panel-header p,
+.stock-table-heading p,
+.tracking-panel-header p,
+.transport-panel-heading p,
+.reports-panel-header p,
+.client-panel-header p {
+  color: #59675d !important;
+  font-size: 11px !important;
+}
+
+/* Indicadores da dashboard */
+.metric-value,
+.stock-metric-card strong,
+.tracking-metric strong,
+.transport-metric-card strong,
+.reports-metric-value {
+  color: #17231a !important;
+  font-weight: 800 !important;
+}
+
+.metric-label,
+.stock-metric-card span,
+.tracking-metric span,
+.transport-metric-card span,
+.reports-metric-label {
+  color: #344438 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+
+.metric-description,
+.stock-metric-card small,
+.tracking-metric small,
+.transport-metric-card small,
+.reports-metric-description {
+  color: #59675d !important;
+  font-size: 11px !important;
+}
+
+/* Menu lateral */
+.sidebar-label {
+  color: #a4b0a5 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+}
+
+.nav-item {
+  color: #d0d8d0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.nav-item.active {
+  color: #ffffff !important;
+  font-weight: 750 !important;
+}
+
+.sidebar-help p,
+.team-info span {
+  color: #b3beb4 !important;
+  font-size: 11px !important;
+}
+
+.team-info strong {
+  color: #ffffff !important;
+  font-size: 13px !important;
+}
+
+/* Tabelas de todos os módulos */
+.stock-table th,
+.transport-table th,
+.reports-table th {
+  color: #46564a !important;
+  background: #f6f8f6 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+}
+
+.stock-table td,
+.transport-table td,
+.reports-table td {
+  color: #344438 !important;
+  font-size: 11px !important;
+}
+
+.stock-product-cell strong,
+.transport-identification strong,
+.reports-activity-name strong {
+  color: #202f24 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.stock-product-cell span,
+.stock-quantity span,
+.transport-identification span {
+  color: #59675d !important;
+  font-size: 10px !important;
+}
+
+.stock-location,
+.stock-quantity strong,
+.transport-vehicle {
+  color: #344438 !important;
+  font-weight: 650 !important;
+}
+
+/* Busca e campos de formulário */
+.search-box input,
+.stock-search input,
+.tracking-search input,
+.transport-search input,
+.client-search-input input {
+  color: #253328 !important;
+  font-size: 12px !important;
+}
+
+.search-box input::placeholder,
+.stock-search input::placeholder,
+.tracking-search input::placeholder,
+.transport-search input::placeholder,
+.client-search-input input::placeholder {
+  color: #657267 !important;
+  opacity: 1;
+}
+
+.stock-form-field,
+.transport-field {
+  color: #344438 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.stock-form-field input,
+.stock-form-field select,
+.transport-field input {
+  color: #253328 !important;
+  font-size: 12px !important;
+}
+
+/* Rastreamento */
+.tracking-vehicle-title strong,
+.tracking-vehicle-info > span,
+.tracking-detail-item strong {
+  color: #26372b !important;
+  font-weight: 700 !important;
+}
+
+.tracking-vehicle-info > small,
+.tracking-detail-item span {
+  color: #536157 !important;
+}
+
+/* Transportes */
+.transport-route-cell > span,
+.transport-date-cell,
+.transport-status-control select {
+  color: #435448 !important;
+  font-weight: 550 !important;
+}
+
+.transport-info strong,
+.transport-info p {
+  color: #344438 !important;
+}
+
+/* Relatórios */
+.reports-chart-summary span,
+.reports-status-name,
+.reports-status-total span,
+.reports-stock-summary > div:nth-child(2) span {
+  color: #536157 !important;
+}
+
+.reports-status-label-row strong,
+.reports-chart-summary strong,
+.reports-stock-summary > div:nth-child(2) strong {
+  color: #202f24 !important;
+  font-weight: 750 !important;
+}
+
+/* Portal do cliente */
+.client-hero-content h2,
+.client-delivery-title h3 {
+  color: #17231a !important;
+  font-weight: 800 !important;
+}
+
+.client-hero-content p,
+.client-timeline-content p,
+.client-info-card small,
+.client-info-card span {
+  color: #536157 !important;
+}
+
+.client-timeline-title strong,
+.client-info-card strong,
+.client-route-summary strong {
+  color: #344438 !important;
+  font-weight: 700 !important;
+}
+
+/* Legendas, datas e textos secundários */
+.date-display,
+.movement-info span,
+.movement-meta time,
+.dashboard-footer,
+.stock-table-footer,
+.tracking-footer,
+.reports-footer,
+.client-footer {
+  color: #59675d !important;
+}
+
+/* Linhas divisórias um pouco mais definidas */
+.metric-card,
+.panel,
+.quick-card,
+.stock-metric-card,
+.stock-table-panel,
+.tracking-metric,
+.tracking-map-panel,
+.tracking-vehicles-panel,
+.tracking-details-panel,
+.transport-metric-card,
+.transport-panel,
+.reports-metric-card,
+.reports-panel,
+.client-panel,
+.client-delivery-overview,
+.client-info-card {
+  border-color: #dce4dc !important;
+}
+
+/* SIRC — ocultar as barras de rolagem visuais */
+
+/* Firefox e navegadores compatíveis */
+html,
+body,
+#root,
+.app-shell,
+.sidebar,
+.sidebar .navigation,
+.main-area {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Chrome, Edge e outros navegadores Chromium */
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-button {
+  display: none !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ==========================================
+   SIRC — RESPONSIVIDADE DA NAVEGAÇÃO
+   ========================================== */
+
+@media (max-width: 760px) {
+  .sidebar {
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .sidebar .brand {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    margin: 0 !important;
+  }
+
+  .sidebar .brand-logo {
+    width: 75px !important;
+    max-width: 75px !important;
+    height: 52px !important;
+    max-height: 52px !important;
+    object-fit: contain !important;
+  }
+
+  /* Menu horizontal com nomes visíveis */
+  .sidebar .navigation {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 7px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 3px 0 5px !important;
+  }
+
+  .sidebar .navigation .nav-item {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+
+    width: auto !important;
+    min-width: max-content !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 9px 12px !important;
+
+    border: 1px solid transparent !important;
+    border-radius: 9px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Desativa as dicas flutuantes e mostra os nomes no botão */
+  .sidebar .navigation .nav-item > span:not(.nav-count) {
+    display: inline !important;
+    position: static !important;
+    transform: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    color: inherit !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    pointer-events: auto !important;
+  }
+
+  .sidebar .navigation .nav-item.active {
+    color: #70e337 !important;
+    border-color: #39cf4535 !important;
+    background: #39cf4518 !important;
+  }
+
+  .sidebar .navigation .nav-item.active::before {
+    display: none !important;
+  }
+
+  .sidebar .navigation .nav-item.active svg {
+    color: #70e337 !important;
+  }
+
+  /* Evita que o conteúdo continue deslocado pela antiga barra lateral */
+  .main-area {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .topbar {
+    position: static !important;
+    width: 100% !important;
+  }
+
+  .dashboard-content,
+  .stock-page,
+  .tracking-page,
+  .transport-page,
+  .reports-page {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ==========================================
+   SIRC — AJUSTE RESPONSIVO DOS MODAIS
+   Transportes: cadastro e histórico
+   ========================================== */
+
+.transport-modal-overlay {
+  box-sizing: border-box;
+  padding: 16px !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.transport-modal {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 510px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: auto;
+}
+
+.transport-modal *,
+.transport-modal *::before,
+.transport-modal *::after {
+  box-sizing: border-box;
+}
+
+.transport-modal-header {
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.transport-modal-header > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.transport-modal-header h3,
+.transport-modal-header p {
+  overflow-wrap: anywhere;
+}
+
+.transport-form {
+  min-width: 0;
+}
+
+.transport-field {
+  min-width: 0;
+}
+
+.transport-field input {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Histórico longo: texto legível e rolagem interna */
+.transport-history-summary,
+.transport-timeline,
+.transport-timeline-event,
+.transport-timeline-content {
+  min-width: 0;
+}
+
+.transport-timeline-content strong,
+.transport-timeline-content p {
+  overflow-wrap: anywhere;
+}
+
+/* Celulares */
+@media (max-width: 760px) {
+  .transport-modal-overlay {
+    align-items: flex-start !important;
+    padding: 12px !important;
+  }
+
+  .transport-modal {
+    width: 100%;
+    max-width: 510px;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: 18px;
+  }
+
+  .transport-modal-header {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .transport-modal-header h3 {
+    font-size: 19px;
+    line-height: 1.35;
+  }
+
+  .transport-form {
+    gap: 14px;
+  }
+
+  .transport-field input {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .transport-modal-actions {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 9px;
+    padding-top: 8px;
+  }
+
+  .transport-modal-actions button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .transport-history-summary {
+    gap: 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .transport-timeline-event {
+    gap: 10px;
+  }
+
+  .transport-timeline-content {
+    flex: 1;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .transport-modal-overlay {
+    padding: 8px !important;
+  }
+
+  .transport-modal {
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 14px;
+  }
+
+  .transport-modal-header h3 {
+    font-size: 17px;
+  }
+
+  .transport-timeline-content strong {
+    font-size: 11px;
+  }
+}
+
+/* Data e horário em campos separados */
+.transport-date-time-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.transport-date-time-fields .transport-field {
+  min-width: 0;
+}
+
+.transport-date-time-fields input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 9px;
+  color: #253328;
+  background: #fff;
+  font-size: 14px;
+  color-scheme: light;
+}
+
+@media (max-width: 420px) {
+  .transport-date-time-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
