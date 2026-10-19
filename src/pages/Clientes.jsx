@@ -196,7 +196,46 @@ function normalizeClientStatus(status, fallbackStatus) {
 
   return fallbackStatus || "Em preparação";
 }
+function buildDeliveryTimeline(transport, fallbackTimeline) {
+  if (
+    !Array.isArray(transport?.history) ||
+    transport.history.length === 0
+  ) {
+    return fallbackTimeline;
+  }
 
+  const status = String(transport.status || "")
+    .trim()
+    .toLowerCase();
+
+  const isDelivered = status.includes("entregue");
+  const isCancelled = status.includes("cancel");
+
+  // O histórico do SIRC guarda os eventos mais recentes primeiro.
+  // O reverse coloca os eventos na ordem cronológica.
+  const events = [...transport.history].reverse();
+
+  return events.map((event, index) => {
+    const isLatest = index === events.length - 1;
+
+    return {
+      title: event.title || "Atualização do transporte",
+
+      description:
+        event.note || "Evento registrado no sistema SIRC.",
+
+      time: event.date || "Data não informada",
+
+      state: isLatest
+        ? isDelivered
+          ? "done"
+          : isCancelled
+            ? "pending"
+            : "current"
+        : "done",
+    };
+  });
+}
 function getDeliveryProgress(status) {
   const value = String(status || "")
     .trim()
@@ -232,55 +271,36 @@ function getStatusClass(status) {
 export default function Clientes() {
   const { transports } = useSircData();
 
-  const deliveries = deliveryTemplates.map((delivery) => {
-    const clientCode = String(delivery.id || "").match(/(\d+)$/)?.[1];
+const deliveries = deliveryTemplates.map((delivery) => {
+  const clientCode = String(delivery.id || "").match(/(\d+)$/)?.[1];
 
-    const transport = transports.find((item) => {
-      return getLoadNumber(item.load) === clientCode;
-      if (clientCode === "2048") {
-  console.log("DIAGNÓSTICO SIRC-2048", {
-    codigoCliente: clientCode,
+  const transport = transports.find((item) => {
+    return getLoadNumber(item.load) === clientCode;
+  });
 
-    cargasEncontradas: transports.map((item) => ({
-      id: item.id,
-      carga: item.load,
-      status: item.status,
-      numeroExtraido: getLoadNumber(item.load),
-    })),
+  return {
+    ...delivery,
 
-    transporteEncontrado: transport
-      ? {
-          id: transport.id,
-          carga: transport.load,
-          status: transport.status,
-        }
-      : null,
+    status: transport
+      ? normalizeClientStatus(transport.status, delivery.status)
+      : delivery.status,
 
-    progressoCalculado: transport
+    progress: transport
       ? getDeliveryProgress(transport.status)
       : delivery.progress,
-  });
-}
-      
-    });
 
-    return {
-      ...delivery,
-      status: transport
-        ? normalizeClientStatus(transport.status, delivery.status)
-        : delivery.status,
-      progress: transport
-        ? getDeliveryProgress(transport.status)
-        : delivery.progress,
-      origin: transport?.origin || delivery.origin,
-      destination: transport?.destination || delivery.destination,
-      expected: transport?.expected || delivery.expected,
-      transportId: transport?.id || delivery.transportId,
-      updatedAt: transport?.updatedAt || delivery.updatedAt,
-      lastUpdate: transport?.updatedAt || delivery.lastUpdate,
-    };
-  });
+    timeline: transport
+      ? buildDeliveryTimeline(transport, delivery.timeline)
+      : delivery.timeline,
 
+    origin: transport?.origin || delivery.origin,
+    destination: transport?.destination || delivery.destination,
+    expected: transport?.expected || delivery.expected,
+    transportId: transport?.id || delivery.transportId,
+    updatedAt: transport?.updatedAt || delivery.updatedAt,
+    lastUpdate: transport?.updatedAt || delivery.lastUpdate,
+  };
+});
   const [trackingCode, setTrackingCode] = useState("SIRC-2048");
   const [activeDeliveryId, setActiveDeliveryId] = useState("SIRC-2048");
   const [error, setError] = useState("");
