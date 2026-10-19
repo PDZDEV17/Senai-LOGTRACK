@@ -1,3 +1,4 @@
+import { useSircData } from "./data/sircStore";
 import Relatorios from "./pages/Relatorios";
 import Clientes from "./pages/Clientes";
 import Transportes from "./pages/transportes";
@@ -39,7 +40,7 @@ const navigation = [
   { id: "relatorios", label: "Relatórios", icon: ChartNoAxesCombined },
 ];
 
-const movements = [
+const movementTemplates = [
   {
     id: 1,
     title: "Entrada de mercadoria",
@@ -78,44 +79,47 @@ const movements = [
   },
 ];
 
-const metrics = [
-  {
-    label: "Itens em estoque",
-    value: "2.480",
-    variation: "+8,2%",
-    description: "em relação ao mês anterior",
-    icon: Boxes,
-    color: "blue",
-    direction: "up",
-  },
-  {
-    label: "Cargas em trânsito",
-    value: "24",
-    variation: "+4",
-    description: "comparado à semana anterior",
-    icon: Truck,
-    color: "purple",
-    direction: "up",
-  },
-  {
-    label: "Entregas concluídas",
-    value: "156",
-    variation: "+12,5%",
-    description: "em relação ao mês anterior",
-    icon: PackageCheck,
-    color: "green",
-    direction: "up",
-  },
-  {
-    label: "Pendências",
-    value: "03",
-    variation: "-2",
-    description: "em relação à semana anterior",
-    icon: Activity,
-    color: "orange",
-    direction: "down",
-  },
-];
+function getProductQuantity(product) {
+  const quantity =
+    product?.quantity ??
+    product?.stock ??
+    product?.currentStock ??
+    product?.qty ??
+    product?.amount ??
+    product?.quantidade ??
+    0;
+
+  return Number(quantity) || 0;
+}
+
+function parseDashboardDate(value) {
+  if (!value) return 0;
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  const parsed = new Date(value).getTime();
+
+  if (!Number.isNaN(parsed)) {
+    return parsed;
+  }
+
+  // Também reconhece datas como 19/10/2026, 14:30.
+  const match = String(value).match(
+    /(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,?\s*(\d{1,2}):(\d{2}))?/
+  );
+
+  if (!match) return 0;
+
+  return new Date(
+    Number(match[3]),
+    Number(match[2]) - 1,
+    Number(match[1]),
+    Number(match[4] || 0),
+    Number(match[5] || 0)
+  ).getTime();
+}
 
 const weekdays = [
   { day: "Seg", height: 42 },
@@ -128,6 +132,12 @@ const weekdays = [
 ];
 
 export default function App() {
+  const {
+    products = [],
+    movements: stockMovements = [],
+    transports = [],
+  } = useSircData();
+
   const [activePage, setActivePage] = useState("dashboard");
   const [search, setSearch] = useState("");
 
@@ -135,12 +145,185 @@ export default function App() {
     (item) => item.id === activePage
   );
 
-  const filteredMovements = movements.filter((movement) =>
+  // Indicadores calculados a partir dos dados compartilhados.
+  const stockTotal = products.reduce(
+    (total, product) => total + getProductQuantity(product),
+    0
+  );
+
+  const inTransitCount = transports.filter(
+    (transport) =>
+      String(transport.status || "").trim().toLowerCase() ===
+      "em trânsito"
+  ).length;
+
+  const deliveredCount = transports.filter(
+    (transport) =>
+      String(transport.status || "").trim().toLowerCase() ===
+      "entregue"
+  ).length;
+
+  const pendingCount = transports.filter((transport) =>
+    [
+      "planejado",
+      "preparando carga",
+      "aguardando saída",
+      "parado",
+    ].includes(String(transport.status || "").trim().toLowerCase())
+  ).length;
+
+  const metrics = [
+    {
+      label: "Itens em estoque",
+      value: stockTotal.toLocaleString("pt-BR"),
+      variation: "Atual",
+      description: "unidades somadas no estoque",
+      icon: Boxes,
+      color: "blue",
+    },
+    {
+      label: "Cargas em trânsito",
+      value: inTransitCount.toLocaleString("pt-BR"),
+      variation: "Atual",
+      description: "transportes em deslocamento",
+      icon: Truck,
+      color: "purple",
+    },
+    {
+      label: "Entregas concluídas",
+      value: deliveredCount.toLocaleString("pt-BR"),
+      variation: "Atual",
+      description: "transportes marcados como entregues",
+      icon: PackageCheck,
+      color: "green",
+    },
+    {
+      label: "Pendências",
+      value: pendingCount.toLocaleString("pt-BR"),
+      variation: "Atual",
+      description: "transportes planejados, em preparação ou parados",
+      icon: Activity,
+      color: "orange",
+    },
+  ];
+
+  // Converte as movimentações do estoque para o formato da Dashboard.
+  const stockActivities = stockMovements.map((movement, index) => {
+    const rawType = String(
+      movement.type ||
+      movement.action ||
+      movement.movementType ||
+      movement.category ||
+      ""
+    ).toLowerCase();
+
+    const isExit =
+      rawType.includes("saída") ||
+      rawType.includes("saida") ||
+      rawType.includes("exit");
+
+    const isEntry =
+      rawType.includes("entrada") ||
+      rawType.includes("entry");
+
+    const productName =
+      movement.productName ||
+      movement.itemName ||
+      (typeof movement.product === "string"
+        ? movement.product
+        : movement.product?.name) ||
+      movement.name;
+
+    const quantity =
+      movement.quantity ??
+      movement.amount ??
+      movement.qty;
+
+    const date =
+      movement.date ||
+      movement.createdAt ||
+      movement.timestamp ||
+      movement.time ||
+      "";
+
+    const description =
+      movement.description ||
+      [
+        productName,
+        quantity != null ? `Quantidade: ${quantity}` : null,
+      ]
+        .filter(Boolean)
+        .join(" • ") ||
+      "Movimentação registrada no estoque.";
+
+    return {
+      id: movement.id ?? `estoque-${index}`,
+      title:
+        movement.title ||
+        (isExit
+          ? "Saída de mercadoria"
+          : isEntry
+            ? "Entrada de mercadoria"
+            : "Movimentação de estoque"),
+      description,
+      time: date || "Data não informada",
+      category: movement.category || (isExit ? "Saída" : "Estoque"),
+      icon: isExit ? Package : PackageCheck,
+      color: isExit ? "orange" : "blue",
+      sortValue: parseDashboardDate(date),
+    };
+  });
+
+  // Aproveita os eventos do histórico de cada transporte.
+  const transportActivities = transports.flatMap((transport) =>
+    (Array.isArray(transport.history) ? transport.history : []).map(
+      (event, index) => {
+        const date = event.date || transport.updatedAt || "";
+
+        const title =
+          event.title || "Atualização do transporte";
+
+        const eventText = String(title).toLowerCase();
+
+        const isDelivered =
+          eventText.includes("entregue") ||
+          String(transport.status || "").toLowerCase() === "entregue";
+
+        return {
+          id: event.id ?? `${transport.id}-evento-${index}`,
+          title,
+          description: [
+            transport.load || transport.id,
+            transport.vehicle,
+            event.note,
+          ]
+            .filter(Boolean)
+            .join(" • "),
+          time: date || "Data não informada",
+          category: "Transporte",
+          icon: isDelivered ? PackageCheck : Truck,
+          color: isDelivered ? "green" : "purple",
+          sortValue: parseDashboardDate(date),
+        };
+      }
+    )
+  );
+
+  const combinedActivities = [
+    ...stockActivities,
+    ...transportActivities,
+  ].sort((a, b) => b.sortValue - a.sortValue);
+
+  const dashboardMovements =
+    combinedActivities.length > 0
+      ? combinedActivities.slice(0, 8)
+      : movementTemplates;
+
+  const filteredMovements = dashboardMovements.filter((movement) =>
     `${movement.title} ${movement.description} ${movement.category}`
       .toLowerCase()
       .includes(search.toLowerCase())
   );
-
   const formattedDate = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
     day: "2-digit",
@@ -274,7 +457,6 @@ export default function App() {
             <section className="metrics-grid">
               {metrics.map((metric) => {
                 const Icon = metric.icon;
-                const TrendIcon =
                   metric.direction === "up"
                     ? ArrowUpRight
                     : ArrowDownRight;
@@ -287,7 +469,6 @@ export default function App() {
                       </div>
 
                       <span className={`variation ${metric.color}`}>
-                        <TrendIcon size={14} />
                         {metric.variation}
                       </span>
                     </div>
@@ -379,11 +560,11 @@ export default function App() {
 
                 <div className="operation-total">
                   <div>
-                    <span>Total de entregas no período</span>
-                    <strong>183</strong>
+                    <span>Total de transportes cadastrados</span>
+                    <strong>{transports.length}</strong>
                   </div>
-                  <span className="operation-badge">Esta semana</span>
-                </div>
+                <span className="operation-badge">Registros atuais</span>
+              </div>
 
                 <div className="chart-area">
                   <div className="chart-grid">
