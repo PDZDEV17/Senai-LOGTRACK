@@ -167,13 +167,15 @@ const deliveryTemplates = [
       },
       {
         title: "Entrega concluída",
-        description: "O status foi marcado como entregue para demonstração.",
+        description:
+          "O status foi marcado como entregue para demonstração.",
         time: "12:20",
         state: "done",
       },
     ],
   },
 ];
+
 function getLoadNumber(value) {
   const match = String(value || "").match(/LT-(\d+)/i);
   return match ? match[1] : null;
@@ -196,6 +198,7 @@ function normalizeClientStatus(status, fallbackStatus) {
 
   return fallbackStatus || "Em preparação";
 }
+
 function buildDeliveryTimeline(transport, fallbackTimeline) {
   if (
     !Array.isArray(transport?.history) ||
@@ -211,8 +214,7 @@ function buildDeliveryTimeline(transport, fallbackTimeline) {
   const isDelivered = status.includes("entregue");
   const isCancelled = status.includes("cancel");
 
-  // O histórico do SIRC guarda os eventos mais recentes primeiro.
-  // O reverse coloca os eventos na ordem cronológica.
+  // O histórico guarda primeiro os eventos mais recentes.
   const events = [...transport.history].reverse();
 
   return events.map((event, index) => {
@@ -220,12 +222,9 @@ function buildDeliveryTimeline(transport, fallbackTimeline) {
 
     return {
       title: event.title || "Atualização do transporte",
-
       description:
         event.note || "Evento registrado no sistema SIRC.",
-
       time: event.date || "Data não informada",
-
       state: isLatest
         ? isDelivered
           ? "done"
@@ -236,6 +235,7 @@ function buildDeliveryTimeline(transport, fallbackTimeline) {
     };
   });
 }
+
 function getDeliveryProgress(status) {
   const value = String(status || "")
     .trim()
@@ -271,45 +271,122 @@ function getStatusClass(status) {
 export default function Clientes() {
   const { transports } = useSircData();
 
-const deliveries = deliveryTemplates.map((delivery) => {
-  const clientCode = String(delivery.id || "").match(/(\d+)$/)?.[1];
+  // Atualiza os registros predefinidos com os transportes correspondentes.
+  const deliveries = deliveryTemplates.map((delivery) => {
+    const clientCode = String(delivery.id || "").match(/(\d+)$/)?.[1];
 
-  const transport = transports.find((item) => {
-    return getLoadNumber(item.load) === clientCode;
+    const transport = transports.find(
+      (item) => getLoadNumber(item.load) === clientCode
+    );
+
+    return {
+      ...delivery,
+      status: transport
+        ? normalizeClientStatus(transport.status, delivery.status)
+        : delivery.status,
+      progress: transport
+        ? getDeliveryProgress(transport.status)
+        : delivery.progress,
+      timeline: transport
+        ? buildDeliveryTimeline(transport, delivery.timeline)
+        : delivery.timeline,
+      origin: transport?.origin || delivery.origin,
+      destination: transport?.destination || delivery.destination,
+      expected: transport?.expected || delivery.expected,
+      transportId: transport?.id || delivery.transportId,
+      vehicleId: transport?.vehicle || delivery.vehicleId,
+      load: transport?.load || delivery.load,
+      trackingCode:
+        transport?.vehicle ||
+        transport?.id ||
+        transport?.load ||
+        delivery.id,
+      updatedAt: transport?.updatedAt || delivery.updatedAt,
+      lastUpdate: transport?.updatedAt || delivery.lastUpdate,
+      location: transport
+        ? "Localização GPS não conectada"
+        : delivery.location,
+    };
   });
 
-  return {
-    ...delivery,
+  // Inclui os transportes novos que não correspondem aos exemplos.
+  const customDeliveries = transports
+    .filter(
+      (transport) =>
+        !deliveries.some(
+          (delivery) => delivery.transportId === transport.id
+        )
+    )
+    .map((transport, index) => {
+      const template =
+        deliveryTemplates[index % deliveryTemplates.length];
 
-    status: transport
-      ? normalizeClientStatus(transport.status, delivery.status)
-      : delivery.status,
+      const timeline = buildDeliveryTimeline(
+        transport,
+        template.timeline
+      );
 
-    progress: transport
-      ? getDeliveryProgress(transport.status)
-      : delivery.progress,
+      return {
+        ...template,
+        id: String(
+          transport.id || transport.vehicle || transport.load
+        ),
+        order: transport.load || transport.id,
+        description: transport.load || `Transporte ${transport.id}`,
+        status: normalizeClientStatus(
+          transport.status,
+          "Em preparação"
+        ),
+        progress: getDeliveryProgress(transport.status),
+        origin: transport.origin || template.origin,
+        destination: transport.destination || template.destination,
+        expected: transport.expected || "Previsão a confirmar",
+        lastUpdate: transport.updatedAt || "Sem atualização",
+        updatedAt: transport.updatedAt,
+        location: "Localização GPS não conectada",
+        transportId: transport.id || "",
+        vehicleId: transport.vehicle || "",
+        load: transport.load || "",
+        trackingCode:
+          transport.vehicle ||
+          transport.id ||
+          transport.load ||
+          "",
+        position: template.position,
+        originPosition: template.originPosition,
+        destinationPosition: template.destinationPosition,
+        route: template.route,
+        timeline,
+      };
+    });
 
-    timeline: transport
-      ? buildDeliveryTimeline(transport, delivery.timeline)
-      : delivery.timeline,
+  // Lista completa pesquisável.
+  const allDeliveries = [...deliveries, ...customDeliveries];
 
-    origin: transport?.origin || delivery.origin,
-    destination: transport?.destination || delivery.destination,
-    expected: transport?.expected || delivery.expected,
-    transportId: transport?.id || delivery.transportId,
-    updatedAt: transport?.updatedAt || delivery.updatedAt,
-    lastUpdate: transport?.updatedAt || delivery.lastUpdate,
-  };
-});
-  const [trackingCode, setTrackingCode] = useState("SIRC-2048");
-  const [activeDeliveryId, setActiveDeliveryId] = useState("SIRC-2048");
-  const [error, setError] = useState("");
-  const [searched, setSearched] = useState(false);
+  const [trackingCode, setTrackingCode] = useState(
+  () => localStorage.getItem("sirc-client-tracking-code") || "SIRC-2048"
+);
 
-  // Busca a versão mais recente da entrega sempre que o SIRC atualizar os dados.
+const [activeDeliveryId, setActiveDeliveryId] = useState(
+  () => localStorage.getItem("sirc-client-active-delivery") || "SIRC-2048"
+);
+
+const [error, setError] = useState("");
+const [searched, setSearched] = useState(false);
+
+// Guarda a última pesquisa e a entrega selecionada.
+useEffect(() => {
+  localStorage.setItem("sirc-client-tracking-code", trackingCode);
+}, [trackingCode]);
+
+useEffect(() => {
+  localStorage.setItem("sirc-client-active-delivery", activeDeliveryId);
+}, [activeDeliveryId]);
+
   const activeDelivery =
-    deliveries.find((delivery) => delivery.id === activeDeliveryId) ||
-    deliveries[0];
+    allDeliveries.find(
+      (delivery) => delivery.id === activeDeliveryId
+    ) || allDeliveries[0] || deliveryTemplates[0];
 
   function handleTracking(event) {
     event.preventDefault();
@@ -322,21 +399,33 @@ const deliveries = deliveryTemplates.map((delivery) => {
       return;
     }
 
-    const result = deliveries.find(
-      (delivery) => delivery.id === normalizedCode
-    );
+    const result = allDeliveries.find((delivery) => {
+      const searchableCodes = [
+        delivery.id,
+        delivery.transportId,
+        delivery.vehicleId,
+        delivery.load,
+        delivery.order,
+        delivery.trackingCode,
+      ];
+
+      return searchableCodes.some(
+        (value) =>
+          String(value || "").trim().toUpperCase() === normalizedCode
+      );
+    });
 
     setSearched(true);
 
     if (!result) {
       setError(
-        "Não encontramos esse código nos dados de demonstração. Confira o código e tente novamente."
+        "Não encontramos esse ID entre os transportes cadastrados. Confira o código do transporte, veículo ou carga."
       );
       return;
     }
 
     setActiveDeliveryId(result.id);
-    setTrackingCode(result.id);
+    setTrackingCode(result.trackingCode || result.id);
     setError("");
   }
 
@@ -386,7 +475,7 @@ const deliveries = deliveryTemplates.map((delivery) => {
                   setTrackingCode(event.target.value);
                   setError("");
                 }}
-                placeholder="Ex.: SIRC-2048"
+                placeholder="Ex.: TRP-123456 ou TR-008"
                 autoComplete="off"
                 required
               />
@@ -406,7 +495,7 @@ const deliveries = deliveryTemplates.map((delivery) => {
 
           {!error && !searched && (
             <span className="client-search-hint">
-              Teste com o código SIRC-2048.
+              Consulte pelo ID do transporte, do veículo ou da carga.
             </span>
           )}
         </div>
@@ -429,7 +518,9 @@ const deliveries = deliveryTemplates.map((delivery) => {
           <div className="client-delivery-title">
             <span>Pedido {activeDelivery.order}</span>
             <h3>{activeDelivery.description}</h3>
-            <small>Código: {activeDelivery.id}</small>
+            <small>
+              Código: {activeDelivery.trackingCode || activeDelivery.id}
+            </small>
           </div>
 
           <span className={`client-status-badge ${statusClass}`}>
