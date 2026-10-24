@@ -14,7 +14,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import "./Estoque.css";
+import "./estoque.css";
 
 const initialProducts = [
   { id: "SIRC-0001", name: "Caixa organizadora", category: "Armazenagem", quantity: 120, minimum: 30, location: "A-01-03" },
