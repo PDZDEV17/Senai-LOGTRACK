@@ -17,7 +17,7 @@ import {
   Truck,
   X,
 } from "lucide-react";
-import "./Transportes.css";
+import "./transportes.css";
 
 const initialTransports = [
   {
