@@ -27,7 +27,7 @@ import {
   Warehouse,
 } from "lucide-react";
 
-import "./Rastreamento.css";
+import "./rastreamento.css";
 
 // Coordenadas demonstrativas.
 // O sistema ainda não recebe localização real por GPS ou ESP32.
