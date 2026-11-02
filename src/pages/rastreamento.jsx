@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useSircData } from "../data/sircStore";
 import L from "leaflet";
@@ -29,17 +30,20 @@ import {
 
 import "./rastreamento.css";
 
-// Coordenadas demonstrativas.
-// O sistema ainda não recebe localização real por GPS ou ESP32.
+import {
+  fetchLatestTelemetry,
+  formatTelemetryTime,
+} from "../services/telemetry";
+
 const vehicleTemplates = [
   {
     id: "TR-008",
     plate: "DEMO-008",
     load: "Carga LT-2048",
     origin: "Armazém SIRC",
-    destination: "Zona Leste — demonstração",
+    destination: "Zona Leste",
     status: "Em trânsito",
-    lastUpdate: "14:32 (exemplo)",
+    lastUpdate: "Sem atualização",
     driver: "Motorista demonstrativo 01",
     position: [-5.0782, -42.7865],
     route: [
@@ -54,9 +58,9 @@ const vehicleTemplates = [
     plate: "DEMO-014",
     load: "Carga LT-2051",
     origin: "Armazém SIRC",
-    destination: "Zona Sul — demonstração",
+    destination: "Zona Sul",
     status: "Parado",
-    lastUpdate: "14:18 (exemplo)",
+    lastUpdate: "Sem atualização",
     driver: "Motorista demonstrativo 02",
     position: [-5.099, -42.814],
     route: [
@@ -71,9 +75,9 @@ const vehicleTemplates = [
     plate: "DEMO-021",
     load: "Carga LT-2057",
     origin: "Armazém SIRC",
-    destination: "Zona Norte — demonstração",
+    destination: "Zona Norte",
     status: "Aguardando saída",
-    lastUpdate: "13:45 (exemplo)",
+    lastUpdate: "Sem atualização",
     driver: "Motorista demonstrativo 03",
     position: [-5.071, -42.814],
     route: [
@@ -94,9 +98,7 @@ const EMPTY_VEHICLE = {
   status: "Aguardando saída",
   lastUpdate: "Sem atualização",
   position: [-5.0895, -42.802],
-  route: [
-    [-5.0895, -42.802],
-  ],
+  route: [[-5.0895, -42.802]],
 };
 
 const statusClass = {
@@ -107,28 +109,13 @@ const statusClass = {
   Cancelado: "cancelled",
 };
 
-// Converte os estados dos transportes para os estados
-// reconhecidos pela tela de Rastreamento.
 function normalizeTransportStatus(status) {
-  const normalizedStatus = String(status || "")
-    .trim()
-    .toLowerCase();
+  const normalized = String(status || "").trim().toLowerCase();
 
-  if (normalizedStatus === "em trânsito".toLowerCase()) {
-    return "Em trânsito";
-  }
-
-  if (normalizedStatus === "parado") {
-    return "Parado";
-  }
-
-  if (normalizedStatus === "entregue") {
-    return "Entregue";
-  }
-
-  if (normalizedStatus === "cancelado") {
-    return "Cancelado";
-  }
+  if (normalized === "em trânsito") return "Em trânsito";
+  if (normalized === "parado") return "Parado";
+  if (normalized === "entregue") return "Entregue";
+  if (normalized === "cancelado") return "Cancelado";
 
   return "Aguardando saída";
 }
@@ -168,7 +155,9 @@ function MapFocus({ position }) {
   const map = useMap();
 
   useEffect(() => {
-    map.flyTo(position, 14, { duration: 0.6 });
+    if (position) {
+      map.flyTo(position, 14, { duration: 0.6 });
+    }
   }, [map, position]);
 
   return null;
@@ -183,66 +172,100 @@ export default function Rastreamento() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
+  const [telemetry, setTelemetry] = useState([]);
+  const [apiState, setApiState] = useState("connecting");
 
-  // Monta a lista de veículos usando os transportes compartilhados.
-  // As coordenadas, placas e motoristas permanecem demonstrativos.
+  useEffect(() => {
+    let active = true;
+    let controller;
+
+    const refreshTelemetry = async () => {
+      controller?.abort();
+      controller = new AbortController();
+
+      try {
+        const items = await fetchLatestTelemetry(controller.signal);
+
+        if (!active) return;
+
+        setTelemetry(items);
+        setApiState("online");
+      } catch (error) {
+        if (!active || error.name === "AbortError") return;
+
+        console.error("Erro ao consultar GPS:", error);
+        setApiState("offline");
+      }
+    };
+
+    refreshTelemetry();
+
+    const interval = window.setInterval(refreshTelemetry, 5000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      controller?.abort();
+    };
+  }, []);
+
+  const telemetryByDevice = new Map(
+    telemetry.map((item) => [item.deviceId, item])
+  );
+
   const vehicles = transports.map((transport, index) => {
     const template =
       vehicleTemplates.find(
-        (vehicle) => vehicle.id === transport.vehicle
+        (vehicle) =>
+          vehicle.id === transport.vehicle ||
+          vehicle.id === transport.id
       ) || vehicleTemplates[index % vehicleTemplates.length];
+
+    const id = transport.vehicle || transport.id;
+
+    const livePoint =
+      telemetryByDevice.get(id) ||
+      telemetryByDevice.get("TR-008");
+
+    const livePosition = livePoint
+      ? [livePoint.latitude, livePoint.longitude]
+      : null;
 
     const loadValue =
       transport.load || template.load.replace(/^Carga\s+/, "");
 
     return {
       ...template,
-
-      // Identificação apresentada para o veículo.
-      id: transport.vehicle || transport.id,
-
-      // Identificador único usado internamente para selecionar
-      // o transporte correto.
+      id,
       transportId: transport.id,
-
       load: loadValue.startsWith("Carga ")
         ? loadValue
         : `Carga ${loadValue}`,
-
       origin: transport.origin || template.origin,
-
       destination: transport.destination || template.destination,
-
       status: normalizeTransportStatus(transport.status),
-
-      lastUpdate: transport.updatedAt || "Sem atualização",
+      lastUpdate: livePoint
+        ? formatTelemetryTime(livePoint.timestamp)
+        : transport.updatedAt || "Sem atualização",
+      position: livePosition || template.position,
+      route: livePosition ? [livePosition] : template.route,
+      isLive: Boolean(livePoint),
     };
   });
 
-  // Se a lista mudar e o transporte selecionado deixar de existir,
-  // seleciona automaticamente o primeiro transporte disponível.
   useEffect(() => {
-    if (vehicles.length === 0) {
-      return;
-    }
+    if (vehicles.length === 0) return;
 
-    const selectedStillExists = vehicles.some(
-      (vehicle) => vehicle.transportId === selectedId
-    );
-
-    if (!selectedStillExists) {
+    if (!vehicles.some((vehicle) => vehicle.transportId === selectedId)) {
       setSelectedId(vehicles[0].transportId);
     }
   }, [vehicles, selectedId]);
 
   const selectedVehicle =
-    vehicles.find(
-      (vehicle) => vehicle.transportId === selectedId
-    ) ||
+    vehicles.find((vehicle) => vehicle.transportId === selectedId) ||
     vehicles[0] ||
     EMPTY_VEHICLE;
 
-  // Pesquisa por veículo, placa, carga ou destino.
   const filteredVehicles = vehicles.filter((vehicle) => {
     const searchableText = `
       ${vehicle.id}
@@ -256,8 +279,7 @@ export default function Rastreamento() {
     );
 
     const matchesStatus =
-      statusFilter === "Todos" ||
-      vehicle.status === statusFilter;
+      statusFilter === "Todos" || vehicle.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -274,35 +296,30 @@ export default function Rastreamento() {
     (vehicle) => vehicle.status === "Aguardando saída"
   ).length;
 
+  const liveCount = vehicles.filter((vehicle) => vehicle.isLive).length;
+
   return (
     <section className="tracking-page">
-      {/* Cabeçalho */}
       <header className="tracking-header">
         <div>
           <span className="tracking-eyebrow">
             RASTREAMENTO DE FROTAS
           </span>
-
           <h2>Rastreamento</h2>
-
-          <p>
-            Acompanhe os veículos e consulte as informações das cargas.
-          </p>
+          <p>Acompanhe os veículos e consulte as informações das cargas.</p>
         </div>
 
         <span className="tracking-demo-badge">
           <Activity size={15} />
-          MODO DEMONSTRAÇÃO
+          {liveCount > 0 ? "GPS INTEGRADO" : "MODO DEMONSTRAÇÃO"}
         </span>
       </header>
 
-      {/* Indicadores */}
       <section className="tracking-metrics">
         <article className="tracking-metric">
           <div className="tracking-metric-icon blue">
             <Truck size={21} />
           </div>
-
           <div>
             <span>Veículos cadastrados</span>
             <strong>{vehicles.length}</strong>
@@ -314,11 +331,10 @@ export default function Rastreamento() {
           <div className="tracking-metric-icon green">
             <Navigation size={21} />
           </div>
-
           <div>
             <span>Em trânsito</span>
             <strong>{movingCount}</strong>
-            <small>Em deslocamento simulado</small>
+            <small>Status dos transportes</small>
           </div>
         </article>
 
@@ -326,7 +342,6 @@ export default function Rastreamento() {
           <div className="tracking-metric-icon orange">
             <Clock3 size={21} />
           </div>
-
           <div>
             <span>Parados</span>
             <strong>{stoppedCount}</strong>
@@ -338,7 +353,6 @@ export default function Rastreamento() {
           <div className="tracking-metric-icon purple">
             <Warehouse size={21} />
           </div>
-
           <div>
             <span>Aguardando saída</span>
             <strong>{waitingCount}</strong>
@@ -347,22 +361,24 @@ export default function Rastreamento() {
         </article>
       </section>
 
-      {/* Mapa e lista de veículos */}
       <section className="tracking-workspace">
         <article className="tracking-map-panel">
           <div className="tracking-panel-header">
             <div>
               <h3>Mapa de operações</h3>
-
               <p>
                 <MapPin size={13} />
-                Teresina, PI — localização ilustrativa
+                {liveCount > 0
+                  ? "Posição recebida da API GPS"
+                  : "Teresina, PI — localização demonstrativa"}
               </p>
             </div>
 
             <span className="tracking-map-label">
               <Signal size={14} />
-              GPS não conectado
+              {apiState === "offline"
+                ? "Erro na conexão com a API"
+                : `${liveCount} GPS conectado(s)`}
             </span>
           </div>
 
@@ -379,9 +395,8 @@ export default function Rastreamento() {
                 maxZoom={19}
               />
 
-              <MapFocus position={selectedVehicle.position} />
+              
 
-              {/* Marcador do armazém */}
               <CircleMarker
                 center={[-5.0895, -42.802]}
                 radius={8}
@@ -399,7 +414,6 @@ export default function Rastreamento() {
                 </Popup>
               </CircleMarker>
 
-              {/* Percurso do veículo selecionado */}
               <Polyline
                 positions={selectedVehicle.route}
                 pathOptions={{
@@ -407,13 +421,13 @@ export default function Rastreamento() {
                   weight: 4,
                   opacity: 0.85,
                   dashArray:
+                    !selectedVehicle.isLive &&
                     selectedVehicle.status === "Aguardando saída"
                       ? "8 8"
                       : undefined,
                 }}
               />
 
-              {/* Veículos vinculados aos transportes */}
               {vehicles.map((vehicle) => (
                 <Marker
                   key={vehicle.transportId}
@@ -431,7 +445,14 @@ export default function Rastreamento() {
                       <strong>{vehicle.id}</strong>
                       <span>{vehicle.load}</span>
                       <span>Status: {vehicle.status}</span>
-                      <span>Localização demonstrativa</span>
+                      <span>
+                        {vehicle.isLive
+                          ? "GPS real — posição recebida da API"
+                          : "Posição demonstrativa — sem GPS recebido"}
+                      </span>
+                      {vehicle.isLive && (
+                        <span>Atualizado: {vehicle.lastUpdate}</span>
+                      )}
                     </div>
                   </Popup>
                 </Marker>
@@ -440,54 +461,35 @@ export default function Rastreamento() {
           </div>
 
           <div className="tracking-map-legend">
-            <span>
-              <i className="legend-circle blue" />
-              Armazém
-            </span>
-
-            <span>
-              <i className="legend-circle green" />
-              Em trânsito
-            </span>
-
-            <span>
-              <i className="legend-circle orange" />
-              Parado
-            </span>
-
-            <span>
-              <i className="legend-circle purple" />
-              Aguardando saída
-            </span>
+            <span><i className="legend-circle blue" />Armazém</span>
+            <span><i className="legend-circle green" />Em trânsito</span>
+            <span><i className="legend-circle orange" />Parado</span>
+            <span><i className="legend-circle purple" />Aguardando saída</span>
           </div>
 
           <div className="tracking-map-notice">
             <AlertTriangle size={16} />
-
             <span>
-              Os veículos e percursos do mapa são fictícios. O sistema
-              ainda não recebe coordenadas reais de GPS ou ESP32.
+              {liveCount > 0
+                ? `Coordenadas recebidas da API. Última atualização: ${selectedVehicle.isLive ? selectedVehicle.lastUpdate : "veículo selecionado sem GPS"}.`
+                : apiState === "offline"
+                  ? "Não foi possível consultar a API. Verifique a conexão e o endpoint."
+                  : "Aguardando dados da API GPS. As posições exibidas ainda são demonstrativas."}
             </span>
           </div>
         </article>
 
-        {/* Painel lateral */}
         <aside className="tracking-vehicles-panel">
           <div className="tracking-panel-header">
             <div>
               <h3>Veículos</h3>
               <p>Selecione um veículo para consultar o percurso.</p>
             </div>
-
-            <span className="tracking-count">
-              {filteredVehicles.length}
-            </span>
+            <span className="tracking-count">{filteredVehicles.length}</span>
           </div>
 
-          {/* Campo de pesquisa */}
           <label className="tracking-search">
             <Search size={17} />
-
             <input
               type="search"
               placeholder="Buscar veículo ou carga..."
@@ -497,10 +499,8 @@ export default function Rastreamento() {
             />
           </label>
 
-          {/* Filtro por status */}
           <label className="tracking-filter">
             <span>Status</span>
-
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
@@ -508,15 +508,12 @@ export default function Rastreamento() {
               <option value="Todos">Todos</option>
               <option value="Em trânsito">Em trânsito</option>
               <option value="Parado">Parado</option>
-              <option value="Aguardando saída">
-                Aguardando saída
-              </option>
+              <option value="Aguardando saída">Aguardando saída</option>
               <option value="Entregue">Entregue</option>
               <option value="Cancelado">Cancelado</option>
             </select>
           </label>
 
-          {/* Lista de transportes */}
           <div className="tracking-vehicle-list">
             {filteredVehicles.map((vehicle) => (
               <button
@@ -534,7 +531,6 @@ export default function Rastreamento() {
                 <div className="tracking-vehicle-info">
                   <div className="tracking-vehicle-title">
                     <strong>{vehicle.id}</strong>
-
                     <span
                       className={`tracking-status ${
                         statusClass[vehicle.status] || "waiting"
@@ -545,11 +541,13 @@ export default function Rastreamento() {
                   </div>
 
                   <span>{vehicle.load}</span>
-
                   <small>
                     <MapPin size={12} />
                     {vehicle.destination}
                   </small>
+                  {vehicle.isLive && (
+                    <small>GPS atualizado: {vehicle.lastUpdate}</small>
+                  )}
                 </div>
               </button>
             ))}
@@ -557,13 +555,11 @@ export default function Rastreamento() {
             {filteredVehicles.length === 0 && (
               <div className="tracking-empty">
                 <Search size={23} />
-
                 <strong>
                   {vehicles.length === 0
                     ? "Nenhum transporte cadastrado"
                     : "Nenhum veículo encontrado"}
                 </strong>
-
                 <span>
                   {vehicles.length === 0
                     ? "Cadastre um transporte para visualizá-lo aqui."
@@ -575,7 +571,6 @@ export default function Rastreamento() {
         </aside>
       </section>
 
-      {/* Detalhes do transporte selecionado */}
       <section className="tracking-details-panel">
         <div className="tracking-panel-header">
           <div>
@@ -597,32 +592,26 @@ export default function Rastreamento() {
             <span>Identificação do veículo</span>
             <strong>{selectedVehicle.id}</strong>
           </div>
-
           <div className="tracking-detail-item">
             <span>Identificação do transporte</span>
             <strong>{selectedVehicle.transportId}</strong>
           </div>
-
           <div className="tracking-detail-item">
             <span>Carga</span>
             <strong>{selectedVehicle.load}</strong>
           </div>
-
           <div className="tracking-detail-item">
             <span>Origem</span>
             <strong>{selectedVehicle.origin}</strong>
           </div>
-
           <div className="tracking-detail-item">
             <span>Destino</span>
             <strong>{selectedVehicle.destination}</strong>
           </div>
-
           <div className="tracking-detail-item">
             <span>Responsável demonstrativo</span>
             <strong>{selectedVehicle.driver}</strong>
           </div>
-
           <div className="tracking-detail-item">
             <span>Última atualização</span>
             <strong>{selectedVehicle.lastUpdate}</strong>
@@ -632,9 +621,10 @@ export default function Rastreamento() {
 
       <footer className="tracking-footer">
         <Package size={15} />
-
         <span>
-          SIRC · Dados de demonstração, sem integração com dispositivos físicos.
+          SIRC · {liveCount > 0
+            ? "Posição GPS recebida pela API."
+            : "Aguardando integração GPS com dispositivo físico."}
         </span>
       </footer>
     </section>
