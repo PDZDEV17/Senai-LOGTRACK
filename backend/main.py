@@ -1,4 +1,3 @@
-
 import json
 import sqlite3
 from contextlib import closing
@@ -25,11 +24,13 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS: permite conexões locais e do site publicado no Render.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://senai-logtrack-site.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -60,7 +61,8 @@ def initialize_database():
                 )
                 """
             )
-            connection.execute(
+
+        connection.execute(
             """
             CREATE TABLE IF NOT EXISTS gps_positions (
                 id TEXT PRIMARY KEY,
@@ -72,6 +74,7 @@ def initialize_database():
             )
             """
         )
+
         connection.commit()
 
 
@@ -81,6 +84,7 @@ def validate_collection(collection: str):
             status_code=404,
             detail="Coleção não encontrada. Use products, movements ou transports.",
         )
+
     return COLLECTIONS[collection]
 
 
@@ -125,7 +129,10 @@ def get_item(collection: str, item_id: str):
         ).fetchone()
 
     if row is None:
-        raise HTTPException(status_code=404, detail="Registro não encontrado.")
+        raise HTTPException(
+            status_code=404,
+            detail="Registro não encontrado.",
+        )
 
     return serialize_row(row)
 
@@ -158,8 +165,14 @@ def create_item(
             INSERT INTO {table} (id, data, created_at, updated_at)
             VALUES (?, ?, ?, ?)
             """,
-            (item_id, json.dumps(data, ensure_ascii=False), timestamp, timestamp),
+            (
+                item_id,
+                json.dumps(data, ensure_ascii=False),
+                timestamp,
+                timestamp,
+            ),
         )
+
         connection.commit()
 
     return {
@@ -184,16 +197,28 @@ def update_item(
         ).fetchone()
 
         if row is None:
-            raise HTTPException(status_code=404, detail="Registro não encontrado.")
+            raise HTTPException(
+                status_code=404,
+                detail="Registro não encontrado.",
+            )
 
         data = dict(item)
         data["id"] = item_id
         timestamp = now_iso()
 
         connection.execute(
-            f"UPDATE {table} SET data = ?, updated_at = ? WHERE id = ?",
-            (json.dumps(data, ensure_ascii=False), timestamp, item_id),
+            f"""
+            UPDATE {table}
+            SET data = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                json.dumps(data, ensure_ascii=False),
+                timestamp,
+                item_id,
+            ),
         )
+
         connection.commit()
 
     return {
@@ -215,9 +240,15 @@ def delete_item(collection: str, item_id: str):
         connection.commit()
 
     if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Registro não encontrado.")
+        raise HTTPException(
+            status_code=404,
+            detail="Registro não encontrado.",
+        )
 
-    return {"message": "Registro excluído com sucesso.", "id": item_id}
+    return {
+        "message": "Registro excluído com sucesso.",
+        "id": item_id,
+    }
 
 
 @app.patch("/api/transports/{transport_id}/status")
@@ -241,13 +272,17 @@ def update_transport_status(
         ).fetchone()
 
         if row is None:
-            raise HTTPException(status_code=404, detail="Transporte não encontrado.")
+            raise HTTPException(
+                status_code=404,
+                detail="Transporte não encontrado.",
+            )
 
         data = json.loads(row["data"])
         data["status"] = new_status
         timestamp = now_iso()
 
         history = data.get("history", [])
+
         if not isinstance(history, list):
             history = []
 
@@ -255,12 +290,22 @@ def update_transport_status(
             "status": new_status,
             "timestamp": timestamp,
         })
+
         data["history"] = history
 
         connection.execute(
-            f"UPDATE {table} SET data = ?, updated_at = ? WHERE id = ?",
-            (json.dumps(data, ensure_ascii=False), timestamp, transport_id),
+            f"""
+            UPDATE {table}
+            SET data = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                json.dumps(data, ensure_ascii=False),
+                timestamp,
+                transport_id,
+            ),
         )
+
         connection.commit()
 
     return {
@@ -311,8 +356,12 @@ def create_gps_position(payload: dict = Body(...)):
         connection.execute(
             """
             INSERT INTO gps_positions (
-                id, truck_id, latitude, longitude,
-                recorded_at, received_at
+                id,
+                truck_id,
+                latitude,
+                longitude,
+                recorded_at,
+                received_at
             )
             VALUES (?, ?, ?, ?, ?, ?)
             """,
@@ -325,6 +374,7 @@ def create_gps_position(payload: dict = Body(...)):
                 received_at,
             ),
         )
+
         connection.commit()
 
     return {
