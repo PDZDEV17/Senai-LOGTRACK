@@ -56,3 +56,38 @@ export function formatTelemetryTime(timestamp) {
 
   return date.toLocaleString("pt-BR");
 }
+
+
+export async function fetchTelemetryHistory(truckId = "TR-008", signal) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/gps/history/${encodeURIComponent(truckId)}?limit=1000`,
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal,
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`API respondeu HTTP ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload)) {
+    throw new Error("A API não retornou uma lista de posições.");
+  }
+
+  return payload
+    .filter(
+      (item) =>
+        Number.isFinite(Number(item.latitude)) &&
+        Number.isFinite(Number(item.longitude))
+    )
+    .map((item) => ({
+      latitude: Number(item.latitude),
+      longitude: Number(item.longitude),
+      timestamp: item.timestamp || item.recorded_at || item.received_at,
+    }))
+    .reverse();
+}
